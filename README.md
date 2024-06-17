@@ -1,4 +1,4 @@
-# Laravel 10 Livewire 預約登記
+# Laravel 11 Livewire 預約登記
 
 預約登記可以輕鬆地管理預約時間和客戶資訊，降低管理人事成本，讓管理者時間安排更有彈性和效率。
 
@@ -35,5 +35,5 @@ $ npm run build
 ----
 
 ## 畫面截圖
-![](https://i.imgur.com/Y1fPXza.gif)
+![](https://i.imgur.com/g3MumZI.gif)
 > 隨時掌握預約狀況，避免預約時段重疊和登記錯誤等人工疏失

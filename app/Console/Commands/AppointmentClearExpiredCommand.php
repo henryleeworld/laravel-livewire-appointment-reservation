@@ -7,13 +7,26 @@ use Illuminate\Console\Command;
 
 class AppointmentClearExpiredCommand extends Command
 {
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
     protected $signature = 'appointment:clear-expired';
 
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
     protected $description = 'Command description';
 
-    public function handle(): void
+    /**
+     * Execute the console command.
+     */
+    public function handle()
     {
-        Appointment::where('reserved_at', '<=', now()->subMinutes(config('appointment.reservation_time')))
+        Appointment::where('reserved_at', '<=', now()->subMinutes(config('app.reservation_time')))
             ->where('confirmed', false)
             ->delete();
     }

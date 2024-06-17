@@ -55,7 +55,7 @@ class DateTimeAvailability extends Component
     public function confirmAppointment(): void
     {
         $appointment = Appointment::find($this->appointmentId);
-        if (!$appointment || Carbon::parse($appointment->reserved_at)->diffInMinutes(now()) > config('appointment.reservation_time')) {
+        if (!$appointment || Carbon::parse($appointment->reserved_at)->diffInMinutes(now()) > config('app.reservation_time')) {
             $this->redirectRoute('dashboard');
             return;
         }

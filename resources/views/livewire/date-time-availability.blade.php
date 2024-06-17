@@ -1,5 +1,5 @@
 @php
-use Carbon\Carbon;
+use Illuminate\Support\Carbon;
 @endphp
 <div class="space-y-4">
     @if(!$appointment)
@@ -42,7 +42,7 @@ use Carbon\Carbon;
     @else
 
         <div class="@if(!$appointment) hidden @endif"
-             x-data="timer('{{ Carbon::parse($appointment->reserved_at)->addMinutes(config('appointment.reservation_time'))->unix() }}')"
+             x-data="timer('{{ Carbon::parse($appointment->reserved_at)->addMinutes((int) config('app.reservation_time'))->unix() }}')"
         >
             <h2 class="text-xl">{{ __('Confirmation for Appointment at: :start_time', ['start_time' => $appointment?->start_time]) }}</h2>
 
@@ -84,9 +84,11 @@ use Carbon\Carbon;
         </div>
     @endif
 </div>
-
+@push('styles')
+<link href="https://cdn.jsdelivr.net/npm/pikaday/css/pikaday.css" rel="stylesheet">
+@endpush
 @push('scripts')
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.30.1/moment.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pikaday/pikaday.js"></script>
     <script>
         // Allows you to select a day from the calendar
