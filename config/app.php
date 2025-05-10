@@ -65,7 +65,7 @@ return [
     |
     */
 
-    'timezone' => env('APP_TIMEZONE', 'UTC'),
+    'timezone' => 'UTC',
 
     /*
     |--------------------------------------------------------------------------
@@ -124,4 +124,5 @@ return [
     ],
 
     'reservation_time' => env('APPOINTMENT_RESERVATION_TIME', 15),
+
 ];
