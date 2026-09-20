@@ -3,18 +3,21 @@
 namespace App\Livewire;
 
 use App\Models\Appointment;
-use Carbon\Carbon;
+use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Carbon;
 use Livewire\Component;
+use Livewire\Attributes\Validate;
 
 class DateTimeAvailability extends Component
 {
-    public string $date;
+    public string $date = '';
 
     public array $availableTimes = [];
 
     public Collection $appointments;
 
+    #[Validate('required')]
     public string $startTime = '';
 
     public ?int $appointmentId = null;
@@ -23,65 +26,95 @@ class DateTimeAvailability extends Component
     {
         $this->date = now()->format('Y-m-d');
 
-        $this->getIntervalsAndAvailableTimes();
+        $this->loadAvailableTimes();
     }
 
     public function updatedDate(): void
     {
-        $this->getIntervalsAndAvailableTimes();
+        $this->loadAvailableTimes();
     }
 
-    public function render()
+    public function render(): View
     {
-        $appointment = $this->appointmentId ? Appointment::find($this->appointmentId) : null;
-
         return view('livewire.date-time-availability', [
-            'appointment' => $appointment
+            'appointment' => $this->appointment,
         ]);
     }
 
     public function save(): void
     {
-        $this->validate([
-            'startTime' => 'required',
+        $this->validate();
+
+        $appointment = Appointment::create([
+            'start_time' => Carbon::parse($this->startTime),
+            'reserved_at' => now(),
         ]);
 
-        $this->appointmentId = Appointment::create([
-            'start_time' => Carbon::parse($this->startTime),
-            'reserved_at' => now()
-        ])->id;
+        $this->appointmentId = $appointment->id;
     }
 
     public function confirmAppointment(): void
     {
-        $appointment = Appointment::find($this->appointmentId);
-        if (!$appointment || Carbon::parse($appointment->reserved_at)->diffInMinutes(now()) > config('app.reservation_time')) {
+        $appointment = $this->appointment;
+
+        if (
+            !$appointment ||
+            Carbon::parse($appointment->reserved_at)
+                ->diffInMinutes(now()) > config('app.reservation_time')
+        ) {
             $this->redirectRoute('dashboard');
+
             return;
         }
-        $appointment->confirmed = true;
-        $appointment->save();
 
-        $this->redirectRoute('appointment-confirmed', $this->appointmentId);
+        $appointment->update([
+            'confirmed' => true,
+        ]);
+
+        $this->redirectRoute(
+            'appointment-confirmed',
+            ['appointment' => $appointment->id]
+        );
     }
 
     public function cancelAppointment(): void
     {
-        Appointment::find($this->appointmentId)?->delete();
+        $this->appointment?->delete();
 
-        $this->reset('appointment');
+        $this->reset('appointmentId');
     }
 
-    protected function getIntervalsAndAvailableTimes(): void
+    public function getAppointmentProperty(): ?Appointment
     {
-        $this->reset('availableTimes');
+        if (!$this->appointmentId) {
+            return null;
+        }
 
-        $carbonIntervals = Carbon::parse($this->date . ' 8 am')->toPeriod($this->date . ' 8 pm', 30, 'minute');
+        return Appointment::find($this->appointmentId);
+    }
 
-        $this->appointments = Appointment::whereDate('start_time', $this->date)->get();
+    protected function loadAvailableTimes(): void
+    {
+        $this->availableTimes = [];
 
-        foreach ($carbonIntervals as $interval) {
-            $this->availableTimes[$interval->format('h:i A')] = !$this->appointments->contains('start_time', $interval);
+        $start = Carbon::parse($this->date . ' 08:00');
+        $end = Carbon::parse($this->date . ' 20:00');
+
+        $intervals = $start->toPeriod($end, '30 minutes');
+
+        $this->appointments = Appointment::query()
+            ->whereDate('start_time', $this->date)
+            ->get();
+
+        foreach ($intervals as $interval) {
+            $formatted = $interval->format('h:i A');
+
+            $this->availableTimes[$formatted] = !$this->appointments
+                ->contains(
+                    fn ($appointment) =>
+                        Carbon::parse($appointment->start_time)
+                            ->equalTo($interval)
+                );
         }
     }
 }

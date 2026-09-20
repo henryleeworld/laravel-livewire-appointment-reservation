@@ -3,24 +3,14 @@
 namespace App\Console\Commands;
 
 use App\Models\Appointment;
+use Illuminate\Console\Attributes\Description;
+use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
+#[Signature('appointment:clear-expired')]
+#[Description('Command description')]
 class AppointmentClearExpiredCommand extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
-    protected $signature = 'appointment:clear-expired';
-
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'Command description';
-
     /**
      * Execute the console command.
      */

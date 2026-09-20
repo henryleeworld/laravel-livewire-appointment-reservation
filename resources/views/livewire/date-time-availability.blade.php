@@ -8,7 +8,8 @@ use Illuminate\Support\Carbon;
                 <input
                         type="text"
                         id="date"
-                        wire:model="date"
+                        wire:model.live="date"
+                        wire:ignore
                         class="bg-gray-200 text-sm sm:text-base pl-2 pr-4 rounded-lg border border-gray-400 py-1 my-1 focus:outline-none focus:border-blue-400"
                         autocomplete="off"
                 />
@@ -16,26 +17,29 @@ use Illuminate\Support\Carbon;
 
             <div class="grid gap-4 grid-cols-6">
                 @foreach($availableTimes as $key => $time)
-                    <div class="w-full group">
+                    <div wire:key="interval-{{ $key }}" class="w-full group">
                         <input
                                 type="radio"
                                 id="interval-{{ $key }}"
                                 name="time"
                                 value="{{ $date . ' ' . $key }}"
                                 @disabled(!$time)
-                                wire:model="startTime"
+                                wire:model.live="startTime"
                                 class="hidden peer">
                         <label
                                 @class(['inline-block w-full text-center border py-1 peer-checked:bg-green-400 peer-checked:border-green-700', 'bg-blue-400 hover:bg-blue-500' => $time, 'bg-gray-100 cursor-not-allowed' => ! $time])
-                                wire:key="interval-{{ $key }}"
                                 for="interval-{{ $key }}">
                             {{ $key }}
                         </label>
                     </div>
                 @endforeach
             </div>
-
-            <button class="mt-4 bg-blue-200 hover:bg-blue-600 px-4 py-1 rounded">
+            @error('startTime')
+                <div class="text-red-500 text-sm">
+                    {{ $message }}
+                </div>
+            @enderror
+            <button type="submit" class="mt-4 bg-blue-200 hover:bg-blue-600 px-4 py-1 rounded">
                 {{ __('Reserve') }}
             </button>
         </form>
@@ -43,13 +47,13 @@ use Illuminate\Support\Carbon;
 
         <div class="@if(!$appointment) hidden @endif"
              x-data="timer('{{ Carbon::parse($appointment->reserved_at)->addMinutes((int) config('app.reservation_time'))->unix() }}')"
+             x-init="init()"
         >
             <h2 class="text-xl">{{ __('Confirmation for Appointment at: :start_time', ['start_time' => $appointment?->start_time]) }}</h2>
 
             <div class="mt-4 mb-4">
                 <p class="text-center">{{ __('Please confirm your appointment within the next:') }}</p>
-                <div class="flex items-center justify-center space-x-4 mt-4"
-                     x-init="init();">
+                <div class="flex items-center justify-center space-x-4 mt-4">
                     <div class="flex flex-col items-center px-4">
                         <span x-text="time().days" class="text-4xl lg:text-5xl">00</span>
                         <span class="text-gray-400 mt-2">{{ __('Days') }}</span>
@@ -72,11 +76,11 @@ use Illuminate\Support\Carbon;
                 </div>
             </div>
             <div class="mt-4">
-                <button wire:click="confirmAppointment"
+                <button wire:click="confirmAppointment" wire:loading.attr="disabled"
                         class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
                     {{ __('Confirm') }}
                 </button>
-                <button wire:click="cancelAppointment"
+                <button wire:click="cancelAppointment" wire:loading.attr="disabled"
                         class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
                     {{ __('Cancel') }}
                 </button>
@@ -92,53 +96,57 @@ use Illuminate\Support\Carbon;
     <script src="https://cdn.jsdelivr.net/npm/pikaday/pikaday.js"></script>
     <script>
         // Allows you to select a day from the calendar
-        new Pikaday({
-            field: document.getElementById('date'),
-            onSelect: function () {
-                @this.
-                set('date', this.getMoment().format('YYYY-MM-DD'));
-            }
-        })
-
+        document.addEventListener('livewire:init', () => {
+            new Pikaday({
+                field: document.getElementById('date'),
+                format: 'YYYY-MM-DD',
+                onSelect() {
+                    $wire.set(
+                        'date',
+                        this.getMoment().format('YYYY-MM-DD')
+                    );
+                }
+            });
+        });
         function timer(expiry) {
             return {
-                expiry: expiry,
-                remaining: null,
+                expiry,
+                remaining: 0,
                 init() {
-                    this.setRemaining()
+                    this.setRemaining();
                     setInterval(() => {
                         this.setRemaining();
                     }, 1000);
                 },
                 setRemaining() {
-                    const diff = this.expiry - moment().unix();
-                    this.remaining = diff;
+                    const now = Math.floor(Date.now() / 1000);
+                    this.remaining = this.expiry - now;
                 },
                 days() {
                     return {
-                        value: this.remaining / 86400,
+                        value: Math.floor(this.remaining / 86400),
                         remaining: this.remaining % 86400
                     };
                 },
                 hours() {
                     return {
-                        value: this.days().remaining / 3600,
+                        value: Math.floor(this.days().remaining / 3600),
                         remaining: this.days().remaining % 3600
                     };
                 },
                 minutes() {
                     return {
-                        value: this.hours().remaining / 60,
+                        value: Math.floor(this.hours().remaining / 60),
                         remaining: this.hours().remaining % 60
                     };
                 },
                 seconds() {
                     return {
-                        value: this.minutes().remaining,
+                        value: Math.floor(this.minutes().remaining),
                     };
                 },
                 format(value) {
-                    return ("0" + parseInt(value)).slice(-2)
+                    return ('0' + value).slice(-2);
                 },
                 time() {
                     return {
@@ -146,7 +154,7 @@ use Illuminate\Support\Carbon;
                         hours: this.format(this.hours().value),
                         minutes: this.format(this.minutes().value),
                         seconds: this.format(this.seconds().value),
-                    }
+                    };
                 }
             }
         }
